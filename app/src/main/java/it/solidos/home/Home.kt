@@ -144,7 +144,11 @@ private fun PaginaHome(
         ) {
             items(home, key = { it.pacchetto }) { app -> IconaApp(app, archivio, conNome = true, togli = { togli(app) }) }
         }
-        Text("Scorri per la Libreria app", style = stile.copy(fontSize = 12.sp, color = Tema.testo2), modifier = Modifier.align(Alignment.CenterHorizontally))
+        // Puntini delle pagine: Home e Libreria app
+        Row(Modifier.align(Alignment.CenterHorizontally), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            Box(Modifier.size(7.dp).background(Color(0xE6FFFFFF), CircleShape))
+            Box(Modifier.size(7.dp).background(Color(0x59FFFFFF), CircleShape))
+        }
         Spacer(Modifier.height(12.dp))
         Row(
             Modifier.padding(horizontal = 12.dp).fillMaxWidth().height(96.dp).vetro(34.dp),
