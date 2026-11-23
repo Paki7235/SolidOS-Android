@@ -1,0 +1,66 @@
+# Costruisce SolidOS per Android e pubblica una nuova versione nelle Releases.
+# Il telefono (Aggiornamenti) legge «versione.json» dell'ultima versione e installa gli APK
+# firmati con la chiave di SolidOS (segreti SOLIDOS_KEYSTORE_B64 e SOLIDOS_KEYSTORE_PASSWORD).
+name: Android
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      novita:
+        description: "Novità di questa versione (una per riga)"
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Numero di versione
+        run: |
+          echo "SOLIDOS_VERSIONE=$((1000 + GITHUB_RUN_NUMBER))" >> $GITHUB_ENV
+          echo "SOLIDOS_NOME_VERSIONE=1.0.$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
+
+      - name: Chiave di firma
+        env:
+          CHIAVE: ${{ secrets.SOLIDOS_KEYSTORE_B64 }}
+          PASSWORD: ${{ secrets.SOLIDOS_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$CHIAVE" ]; then echo "::error::Manca il segreto SOLIDOS_KEYSTORE_B64"; exit 1; fi
+          echo "$CHIAVE" | base64 -d > $RUNNER_TEMP/solidos.jks
+          echo "SOLIDOS_KEYSTORE=$RUNNER_TEMP/solidos.jks" >> $GITHUB_ENV
+          echo "SOLIDOS_KEYSTORE_PASSWORD=$PASSWORD" >> $GITHUB_ENV
+
+      - name: Costruisci
+        run: ./gradlew --no-daemon :app:assembleRelease
+
+      - name: Pubblica la versione
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOVITA: ${{ github.event.inputs.novita }}
+        run: |
+          mkdir -p uscita
+          cp app/build/outputs/apk/release/app-release.apk uscita/SolidOS.apk
+          TAG="android-$SOLIDOS_VERSIONE"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/SolidOS.apk"
+          SHA=$(sha256sum uscita/SolidOS.apk | cut -d' ' -f1)
+          BYTE=$(stat -c%s uscita/SolidOS.apk)
+          if [ -z "$NOVITA" ]; then NOVITA="$(git log -1 --pretty=%s)"; fi
+          python3 - "$SOLIDOS_VERSIONE" "$SOLIDOS_NOME_VERSIONE" "$URL" "$SHA" "$BYTE" "$NOVITA" > uscita/versione.json <<'PY'
+          import json, sys, datetime
+          codice, nome, url, sha, byte, novita = sys.argv[1:7]
+          print(json.dumps({"versionCode": int(codice), "versione": nome,
+                            "data": datetime.date.today().strftime("%d/%m/%Y"),
+                            "novita": [r.strip("-• ").strip() for r in novita.replace("; ", "\n").splitlines() if r.strip()][:12],
+                            "apk": [{"nome": "SolidOS.apk", "url": url, "sha256": sha, "byte": int(byte)}]}, ensure_ascii=False, indent=1))
+          PY
+          gh release create "$TAG" uscita/SolidOS.apk uscita/versione.json \
+            --title "SolidOS per Android $SOLIDOS_NOME_VERSIONE" --notes "$NOVITA" --latest

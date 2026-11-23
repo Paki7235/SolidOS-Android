@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Aggiornamenti di SolidOS: scarica e installa le nuove versioni firmate -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
+
+    <!-- La Libreria app vede le app che si possono aprire -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:label="SolidOS"
+        android:icon="@mipmap/ic_launcher"
+        android:theme="@style/Tema.SolidOS"
+        android:supportsRtl="true">
+
+        <!-- La Home: è il «launcher» del telefono -->
+        <activity
+            android:name=".Home"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:stateNotNeeded="true"
+            android:excludeFromRecents="true"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Aggiornamenti (come sul PC) -->
+        <activity
+            android:name=".Aggiornamenti"
+            android:exported="true"
+            android:label="Aggiornamenti"
+            android:theme="@style/Tema.SolidOS" />
+
+        <receiver android:name=".EsitoInstallazione" android:exported="false" />
+    </application>
+</manifest>
